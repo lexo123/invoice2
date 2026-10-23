@@ -1,0 +1,417 @@
+{
+  "base64": "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",
+  "fileName": "pos.xlsx",
+  "instructions": [
+    {
+      "id": "custom-A12-1792744901796",
+      "address": "A12",
+      "label": "კომპანიის სახელი",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": true,
+      "prefixText": "კომპ/სახელი:"
+    },
+    {
+      "id": "custom-A13-1792744930008",
+      "address": "A13",
+      "label": "ს/კ",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": true,
+      "prefixText": "ს/კ",
+      "optional": false
+    },
+    {
+      "id": "custom-A14-1792744959375",
+      "address": "A14",
+      "label": "მისამართი",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": true,
+      "prefixText": "მისამართი:"
+    },
+    {
+      "id": "custom-D5-1792745363551",
+      "address": "D5",
+      "label": "ინვოისის ნომერი",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": ""
+    },
+    {
+      "id": "custom-D7-1792745385102",
+      "address": "D7",
+      "label": "დოლარის კურსი",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": ""
+    },
+    {
+      "id": "custom-A17-1792745442928",
+      "address": "A17",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": ""
+    },
+    {
+      "id": "custom-B17-1792745461859",
+      "address": "B17",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": ""
+    },
+    {
+      "id": "custom-C17-1792745490486",
+      "address": "C17",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "cell-D4-1792748499689",
+      "address": "D4",
+      "label": "თარიღი",
+      "group": "other",
+      "inputType": "date",
+      "usePrefix": false,
+      "prefixText": ""
+    },
+    {
+      "id": "cell-D17-1792748997717",
+      "address": "D17",
+      "label": "უჯრა D17",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "formulaExpression": "=B17*C17",
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-A18-1792750508513",
+      "address": "A18",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B18-1792750530163",
+      "address": "B18",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-C18-1792750615614",
+      "address": "C18",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-A19-1792750637929",
+      "address": "A19",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-A20-1792750645656",
+      "address": "A20",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-A21-1792750653311",
+      "address": "A21",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-A22-1792750661744",
+      "address": "A22",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-A23-1792750671991",
+      "address": "A23",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-A24-1792750679612",
+      "address": "A24",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B19-1792750764133",
+      "address": "B19",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B20-1792750778299",
+      "address": "B20",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B21-1792750787998",
+      "address": "B21",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B22-1792750794196",
+      "address": "B22",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B23-1792750802255",
+      "address": "B23",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B24-1792750808313",
+      "address": "B24",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-C19-1792750829624",
+      "address": "C19",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-C20-1792750837397",
+      "address": "C20",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-C21-1792750843587",
+      "address": "C21",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-C22-1792750851045",
+      "address": "C22",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-C23-1792750858553",
+      "address": "C23",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-C24-1792750877005",
+      "address": "C24",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-D18-1792750923111",
+      "address": "D18",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B18*c18",
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-D19-1792750959149",
+      "address": "D19",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B19*C19",
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-D20-1792750973902",
+      "address": "D20",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B20*C20",
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-D21-1792750989589",
+      "address": "D21",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B21*C21",
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-D22-1792751021371",
+      "address": "D22",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B22*C22",
+      "currencySymbol": "₾",
+      "formulaResultFormat": "currency"
+    },
+    {
+      "id": "custom-D23-1792751048740",
+      "address": "D23",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B23*C23",
+      "currencySymbol": "₾",
+      "formulaResultFormat": "currency"
+    },
+    {
+      "id": "custom-D24-1792751068293",
+      "address": "D24",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B24*C24",
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-D36-1792751165861",
+      "address": "D36",
+      "label": "ჯამი",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": true,
+      "prefixText": " ლარი",
+      "optional": false,
+      "formulaExpression": "=D17+D18+D19+D20+D21+D22+D23+D24",
+      "affixPosition": "end",
+      "formulaResultFormat": "number",
+      "currencySymbol": "₾"
+    }
+  ]
+}

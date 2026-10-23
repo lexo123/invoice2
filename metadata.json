@@ -1,0 +1,6 @@
+{
+  "name": "InvoExcel — ექსელის ინვოისების და PDF გენერატორი",
+  "description": "ერთგვერდიანი ექსელის ინვოისის შაბლონის მართვა, უჯრების ცვლილება, ფორმულების გადათვლა და იდენტური Excel და PDF ფაილების გენერაცია.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
