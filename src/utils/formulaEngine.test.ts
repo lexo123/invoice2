@@ -301,6 +301,78 @@ test('syncFileNameWithCompanyName defaults fileName to companyName until manuall
   assert.equal(resolveInvoiceFileNameBase('', ''), 'ინვოისი');
 });
 
+test('buildCombinedWorkbookPayload keeps mode: "number" for cells marked as რიცხვი (e.g. D36) so ₾ is never added automatically', async () => {
+  const { buildCombinedWorkbookPayload, applyAffixToDisplayValue } = await import('./formulaEngine');
+  const instructions = [
+    {
+      id: 'custom-D36',
+      address: 'D36',
+      label: 'ჯამი',
+      group: 'other' as const,
+      inputType: 'formula' as const,
+      usePrefix: true,
+      prefixText: ' ლარი',
+      affixPosition: 'end' as const,
+      formulaExpression: '=D17+D18+D19+D20+D21+D22+D23+D24',
+      formulaResultFormat: 'number' as const,
+      currencySymbol: '₾' as const,
+    },
+    {
+      id: 'custom-D17',
+      address: 'D17',
+      label: 'უჯრა D17',
+      group: 'other' as const,
+      inputType: 'formula' as const,
+      usePrefix: false,
+      prefixText: '',
+      formulaExpression: '=B17*C17',
+      // formulaResultFormat omitted (defaults to 'number' / რიცხვი in UI)
+      currencySymbol: '₾' as const,
+    },
+  ];
+
+  const payload = buildCombinedWorkbookPayload(
+    instructions,
+    {},
+    DEFAULT_MAIN_HEADER_CONFIGS,
+    {
+      companyName: 'შპს ტესტი',
+      cadastralCode: '123456789',
+      address: 'თბილისი',
+      usdRate: '2.6',
+      date: '23.10.2026',
+      invoiceNumber: 'INV-1',
+    },
+    [
+      {
+        id: 'prod-1',
+        productName: 'მომსახურება',
+        quantity: '2',
+        unitPrice: '150',
+        currency: '₾',
+      },
+    ],
+    'D36',
+    null
+  );
+
+  // D36 and D17 are marked as რიცხვი ('number'), so currencyRules must stay { mode: 'number' }
+  assert.deepEqual(payload.currencyRules.D36, { mode: 'number' });
+  assert.deepEqual(payload.currencyRules.D17, { mode: 'number' });
+  assert.deepEqual(payload.affixRules.D36, { text: 'ლარი', position: 'end' });
+
+  // Formatted display for D36 is plain number + suffix ("300 ლარი"), with NO '₾' symbol added!
+  const numFormatted = formatExcelCellValue(300, 'General');
+  const finalD36Display = applyAffixToDisplayValue(
+    numFormatted,
+    true,
+    payload.affixRules.D36.text,
+    payload.affixRules.D36.position
+  );
+  assert.equal(finalD36Display, '300 ლარი');
+  assert.equal(finalD36Display.includes('₾'), false);
+});
+
 test('cells marked as number (რიცხვი) — including D36 — do NOT automatically receive the Lari symbol (₾)', () => {
   const instructions = [
     {
@@ -371,6 +443,49 @@ test('cells marked as number (რიცხვი) — including D36 — do NOT a
   assert.equal(finalD36Display, '100 ლარი');
   assert.equal(finalD36Display.includes('₾'), false);
 });
+
+test('product cells (A17:A24) keep numeric input as string so they always align to the left like text', () => {
+  const payload = buildCombinedWorkbookPayload(
+    [],
+    {},
+    DEFAULT_MAIN_HEADER_CONFIGS,
+    {
+      companyName: 'შპს გია',
+      cadastralCode: '123456789',
+      address: 'თბილისი',
+      usdRate: '2.6',
+      date: '24.10.2026',
+      invoiceNumber: '01',
+    },
+    [
+      {
+        id: 'prod-1',
+        productName: '12345',
+        quantity: '2',
+        unitPrice: '50',
+        currency: '₾',
+      },
+    ],
+    'D36',
+    null
+  );
+
+  assert.equal(typeof payload.effectiveOverrides['A17'], 'string');
+  assert.equal(payload.effectiveOverrides['A17'], '12345');
+
+  const recalculated = recalculateSheetCells(
+    { A17: { value: '' }, B17: { value: 1 }, C17: { value: 0 } },
+    payload.effectiveOverrides
+  );
+
+  // A17 must remain a string ('12345'), NOT coerced to number 12345 (which would trigger right-alignment)
+  assert.equal(typeof recalculated['A17'].value, 'string');
+  assert.equal(recalculated['A17'].value, '12345');
+  // Meanwhile B17 and C17 are numbers
+  assert.equal(typeof recalculated['B17'].value, 'number');
+  assert.equal(typeof recalculated['C17'].value, 'number');
+});
+
 
 
 

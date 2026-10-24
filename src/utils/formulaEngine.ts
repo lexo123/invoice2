@@ -746,11 +746,7 @@ export function recalculateSheetCells(
     let coercedValue: string | number = newValue;
     if (typeof newValue === 'string') {
       const trimmed = newValue.trim();
-      if (trimmed === '') {
-        coercedValue = '';
-      } else if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
-        coercedValue = parseFloat(trimmed);
-      }
+      coercedValue = trimmed === '' ? '' : newValue;
     }
     result[norm] = {
       value: coercedValue,

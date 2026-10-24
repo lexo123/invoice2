@@ -330,15 +330,17 @@ export async function parseExcelBufferToSheetModel(buffer: ArrayBuffer): Promise
         }
       }
 
-      // Alignment
-      const alignHorizontal =
-        cell.alignment?.horizontal === 'center' ||
-        cell.alignment?.horizontal === 'right' ||
-        cell.alignment?.horizontal === 'left'
-          ? cell.alignment.horizontal
-          : typeof recalc.value === 'number'
-          ? 'right'
-          : 'left';
+      // Alignment: Product cells (A17:A24) are always left-aligned whether they contain text or numbers
+      const isProductNameCell = c === 1 && r >= 17 && r <= 24;
+      const alignHorizontal = isProductNameCell
+        ? 'left'
+        : cell.alignment?.horizontal === 'center' ||
+          cell.alignment?.horizontal === 'right' ||
+          cell.alignment?.horizontal === 'left'
+        ? cell.alignment.horizontal
+        : typeof recalc.value === 'number'
+        ? 'right'
+        : 'left';
 
       const alignVertical =
         cell.alignment?.vertical === 'top' ||
@@ -561,6 +563,15 @@ export async function generateUpdatedExcelPackage(
     } else {
       const finalVal = calcEntry ? calcEntry.value : newVal;
       cell.value = finalVal === '' ? null : finalVal;
+      if (
+        (coord.col === 1 && coord.row >= 17 && coord.row <= 24) ||
+        (typeof finalVal === 'string' && finalVal !== '' && !cell.alignment?.horizontal)
+      ) {
+        cell.alignment = {
+          ...(cell.alignment || {}),
+          horizontal: 'left',
+        };
+      }
     }
 
     // Apply number vs currency numFmt in the Excel file if specified

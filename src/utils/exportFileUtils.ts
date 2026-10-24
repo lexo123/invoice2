@@ -30,17 +30,36 @@ export async function exportSheetElementToPdf(
   const widthPx = rect.width || sheetElement.scrollWidth || 760;
   const heightPx = rect.height || sheetElement.scrollHeight || 980;
 
-  const dataUrl = await toPng(sheetElement, {
-    quality: 1.0,
-    pixelRatio: 2.5,
-    backgroundColor: '#FFFFFF',
-    width: widthPx,
-    height: heightPx,
-    style: {
-      transform: 'scale(1)',
-      transformOrigin: 'top left',
-    },
-  });
+  const temporarilyDisabledSheets: CSSStyleSheet[] = [];
+  if (typeof document !== 'undefined' && document.styleSheets) {
+    for (const sheet of Array.from(document.styleSheets)) {
+      try {
+        void sheet.cssRules;
+      } catch {
+        sheet.disabled = true;
+        temporarilyDisabledSheets.push(sheet);
+      }
+    }
+  }
+
+  let dataUrl: string;
+  try {
+    dataUrl = await toPng(sheetElement, {
+      quality: 1.0,
+      pixelRatio: 2.5,
+      backgroundColor: '#FFFFFF',
+      width: widthPx,
+      height: heightPx,
+      style: {
+        transform: 'scale(1)',
+        transformOrigin: 'top left',
+      },
+    });
+  } finally {
+    for (const sheet of temporarilyDisabledSheets) {
+      sheet.disabled = false;
+    }
+  }
 
   // A4 dimensions in mm: 210 x 297
   const pdf = new jsPDF({
