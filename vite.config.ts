@@ -21,8 +21,12 @@ function embeddedTemplateSyncPlugin(): Plugin {
         req.on('end', () => {
           try {
             const parsed = JSON.parse(body);
-            if (parsed && typeof parsed.base64 === 'string' && parsed.base64.length > 0) {
-              const targetPath = path.resolve(__dirname, 'src/utils/embeddedCustomTemplate.json');
+            if (parsed && typeof parsed === 'object') {
+              const isBtrade = parsed.profileId === 'btrade';
+              const targetFile = isBtrade
+                ? 'src/utils/embeddedBtradeTemplate.json'
+                : 'src/utils/embeddedCustomTemplate.json';
+              const targetPath = path.resolve(__dirname, targetFile);
               const existingRaw = fs.existsSync(targetPath)
                 ? fs.readFileSync(targetPath, 'utf-8')
                 : '{}';
@@ -32,19 +36,35 @@ function embeddedTemplateSyncPlugin(): Plugin {
               } catch {
                 existing = {};
               }
-              const nextContent = JSON.stringify(
-                {
-                  base64: parsed.base64,
-                  fileName: parsed.fileName || existing.fileName || 'შაბლონი.xlsx',
+              const nextBase64 =
+                typeof parsed.base64 === 'string' && parsed.base64.length > 0
+                  ? parsed.base64
+                  : existing.base64 || '';
+              if (nextBase64.length > 0 || Array.isArray(parsed.instructions)) {
+                const payloadObj: Record<string, any> = {
+                  base64: nextBase64,
+                  fileName:
+                    parsed.fileName ||
+                    existing.fileName ||
+                    (isBtrade ? 'btrade.xlsx' : 'pos.xlsx'),
                   instructions: Array.isArray(parsed.instructions)
                     ? parsed.instructions
                     : existing.instructions || [],
-                },
-                null,
-                2
-              );
-              if (existingRaw.trim() !== nextContent.trim()) {
-                fs.writeFileSync(targetPath, nextContent, 'utf-8');
+                };
+                if (Array.isArray(parsed.mainHeaderConfigs)) {
+                  payloadObj.mainHeaderConfigs = parsed.mainHeaderConfigs;
+                } else if (Array.isArray(existing.mainHeaderConfigs)) {
+                  payloadObj.mainHeaderConfigs = existing.mainHeaderConfigs;
+                }
+                if (typeof parsed.grandTotalAddress === 'string' && parsed.grandTotalAddress) {
+                  payloadObj.grandTotalAddress = parsed.grandTotalAddress;
+                } else if (typeof existing.grandTotalAddress === 'string' && existing.grandTotalAddress) {
+                  payloadObj.grandTotalAddress = existing.grandTotalAddress;
+                }
+                const nextContent = JSON.stringify(payloadObj, null, 2);
+                if (existingRaw.trim() !== nextContent.trim()) {
+                  fs.writeFileSync(targetPath, nextContent, 'utf-8');
+                }
               }
             }
             res.statusCode = 200;
@@ -74,7 +94,11 @@ export default defineConfig(() => {
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      watch:
+        process.env.DISABLE_HMR === 'true'
+          ? null
+          : {ignored: ['**/src/utils/embedded*.json']},
     },
   };
 });
+

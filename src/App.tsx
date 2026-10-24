@@ -20,6 +20,7 @@ import {
   EditableCellInstruction,
   FormulaResultFormat,
   GeneratedInvoicePackage,
+  InvoiceProfileId,
   MainHeaderFieldConfig,
   MainHeaderFieldKey,
   ParsedSheetModel,
@@ -58,9 +59,11 @@ import {
 import {
   clearCustomDefaultTemplate,
   loadCustomDefaultTemplate,
+  loadSavedGrandTotalAddress,
   loadSavedInstructionsForTemplate,
   loadSavedMainHeaderConfigs,
   saveCustomDefaultTemplate,
+  saveGrandTotalAddress,
   saveInstructionsForTemplate,
   saveMainHeaderConfigs,
 } from './utils/templateStorage';
@@ -73,8 +76,32 @@ type SettingsSubTab = 'fields' | 'instructions' | 'template';
 const DEFAULT_TEMPLATE_FILENAME = 'სტანდარტული_ინვოისის_შაბლონი.xlsx';
 const MAX_PRODUCT_ROWS = 8; // 1 initial (A17:C17) + up to 7 added (A18:C18 .. A24:C24)
 
+const PROFILE_LABELS: Record<InvoiceProfileId, string> = {
+  mypos: 'მაიპოს',
+  btrade: 'ბითრეიდ',
+};
+
+interface ProfileSessionSnapshot {
+  templateBuffer: ArrayBuffer | null;
+  templateName: string;
+  isCustomDefault: boolean;
+  mainHeaderConfigs: MainHeaderFieldConfig[];
+  mainHeaderValues: Record<MainHeaderFieldKey, string>;
+  customFileName: string;
+  isFileNameCustomized: boolean;
+  productRows: ProductRowItem[];
+  grandTotalAddress: string;
+  instructions: EditableCellInstruction[];
+  editableValues: Record<string, string | number>;
+  sheetModel: ParsedSheetModel | null;
+  generatedPackage: GeneratedInvoicePackage | null;
+  isDirtySinceLastGenerate: boolean;
+}
+
 export default function App() {
-  // Top-level navigation: 'home' (streamlined invoice generator) vs 'settings' (all configuration tools)
+  // Active company/template profile: 'mypos' ("მაიპოს") vs 'btrade' ("ბითრეიდ")
+  const [activeProfile, setActiveProfile] = useState<InvoiceProfileId>('mypos');
+  // Top-level navigation: 'home' (streamlined invoice generator for activeProfile) vs 'settings' (configuration tools)
   const [activeView, setActiveView] = useState<AppMainView>('home');
   const [settingsTab, setSettingsTab] = useState<SettingsSubTab>('fields');
 
@@ -137,6 +164,9 @@ export default function App() {
 
   const sheetPrintRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const profileSessionCacheRef = useRef<
+    Partial<Record<InvoiceProfileId, ProfileSessionSnapshot>>
+  >({});
 
   // Live calculation of all product rows (A17:C17 .. A24:C24) and Grand Total in Lari (₾) BEFORE clicking "შექმნა"
   const liveProductsSummary = React.useMemo(() => {
@@ -179,123 +209,205 @@ export default function App() {
     };
   };
 
-  // Initialize embedded/custom template on mount
-  useEffect(() => {
-    let mounted = true;
-    async function initTemplate() {
-      try {
-        const savedCustom = loadCustomDefaultTemplate();
-        let buf: ArrayBuffer;
-        let name: string;
-        let customFlag = false;
+  const loadTemplateForProfile = async (
+    targetProfile: InvoiceProfileId,
+    isCancelled?: () => boolean
+  ) => {
+    try {
+      const cached = profileSessionCacheRef.current[targetProfile];
+      if (cached && cached.templateBuffer && cached.sheetModel) {
+        setTemplateBuffer(cached.templateBuffer);
+        setTemplateName(cached.templateName);
+        setIsCustomDefault(cached.isCustomDefault);
+        setMainHeaderConfigs(cached.mainHeaderConfigs);
+        setMainHeaderValues(cached.mainHeaderValues);
+        setCustomFileName(cached.customFileName);
+        setIsFileNameCustomized(cached.isFileNameCustomized);
+        setProductRows(cached.productRows);
+        setGrandTotalAddress(cached.grandTotalAddress);
+        setInstructions(cached.instructions);
+        setEditableValues(cached.editableValues);
+        setSheetModel(cached.sheetModel);
+        setGeneratedPackage(cached.generatedPackage);
+        setIsDirtySinceLastGenerate(cached.isDirtySinceLastGenerate);
+        return;
+      }
 
-        if (savedCustom) {
-          buf = savedCustom.buffer;
-          name = savedCustom.fileName;
-          customFlag = true;
+      const savedCustom = loadCustomDefaultTemplate(targetProfile);
+      let buf: ArrayBuffer;
+      let name: string;
+      let customFlag = false;
+
+      if (savedCustom) {
+        buf = savedCustom.buffer;
+        name = savedCustom.fileName;
+        customFlag = true;
+      } else {
+        buf = await createDefaultInvoiceTemplateBuffer();
+        name =
+          targetProfile === 'btrade'
+            ? 'btrade_სტანდარტული_შაბლონი.xlsx'
+            : DEFAULT_TEMPLATE_FILENAME;
+      }
+
+      const parsed = await parseExcelBufferToSheetModel(buf);
+      if (isCancelled?.()) return;
+
+      const loadedInstructions = loadSavedInstructionsForTemplate(
+        name,
+        customFlag ? [] : DEFAULT_EDITABLE_INSTRUCTIONS,
+        targetProfile
+      );
+
+      const savedMainConfigs = loadSavedMainHeaderConfigs(name, targetProfile);
+      const resolvedHeaderConfigs = resolveMainHeaderFieldConfigs(
+        parsed,
+        loadedInstructions,
+        savedMainConfigs
+      );
+
+      const loadedTotalAddr = loadSavedGrandTotalAddress(
+        name,
+        targetProfile,
+        'D36'
+      );
+
+      const { nextHeaderVals, initialRows } = extractInitialMainFormState(
+        parsed,
+        resolvedHeaderConfigs,
+        loadedInstructions
+      );
+
+      const initVals: Record<string, string | number> = {};
+      for (const inst of loadedInstructions) {
+        const addr = inst.address.toUpperCase();
+        const cell = parsed.cells[addr];
+        if (inst.inputType === 'formula') {
+          initVals[addr] =
+            inst.formulaExpression ||
+            (cell?.formula ? `=${cell.formula}` : '=');
         } else {
-          buf = await createDefaultInvoiceTemplateBuffer();
-          name = DEFAULT_TEMPLATE_FILENAME;
-        }
-
-        const parsed = await parseExcelBufferToSheetModel(buf);
-        if (!mounted) return;
-
-        setTemplateBuffer(buf);
-        setTemplateName(name);
-        setIsCustomDefault(customFlag);
-        setSheetModel(parsed);
-
-        const loadedInstructions = loadSavedInstructionsForTemplate(
-          name,
-          customFlag ? [] : DEFAULT_EDITABLE_INSTRUCTIONS
-        );
-
-        // Automatically resolve the 6 Main Header fields for this template
-        const savedMainConfigs = loadSavedMainHeaderConfigs(name);
-        const resolvedHeaderConfigs = resolveMainHeaderFieldConfigs(
-          parsed,
-          loadedInstructions,
-          savedMainConfigs
-        );
-        setMainHeaderConfigs(resolvedHeaderConfigs);
-
-        const { nextHeaderVals, initialRows } = extractInitialMainFormState(
-          parsed,
-          resolvedHeaderConfigs,
-          loadedInstructions
-        );
-        setMainHeaderValues(nextHeaderVals);
-        setCustomFileName(nextHeaderVals.companyName);
-        setIsFileNameCustomized(false);
-        setProductRows(initialRows);
-
-        setInstructions(loadedInstructions);
-
-        const initVals: Record<string, string | number> = {};
-        for (const inst of loadedInstructions) {
-          const addr = inst.address.toUpperCase();
-          const cell = parsed.cells[addr];
-          if (inst.inputType === 'formula') {
-            initVals[addr] =
-              inst.formulaExpression ||
-              (cell?.formula ? `=${cell.formula}` : '=');
-          } else {
-            const rawCellVal = cell?.value ?? '';
-            initVals[addr] = stripPrefixFromCellValue(
-              rawCellVal,
-              inst.usePrefix,
-              inst.prefixText,
-              inst.affixPosition || 'start'
-            );
-          }
-        }
-        setEditableValues(initVals);
-
-        const { effectiveOverrides, affixRules, currencyRules } =
-          buildCombinedWorkbookPayload(
-            loadedInstructions,
-            initVals,
-            resolvedHeaderConfigs,
-            nextHeaderVals,
-            initialRows,
-            'D36',
-            parsed
-          );
-
-        const pkg = await generateUpdatedExcelPackage(
-          buf,
-          effectiveOverrides,
-          'ინვოისი',
-          affixRules,
-          currencyRules
-        );
-        if (mounted) {
-          setGeneratedPackage(pkg);
-          setSheetModel(pkg.sheetModel);
-          setIsDirtySinceLastGenerate(false);
-        }
-      } catch (err: any) {
-        if (mounted) {
-          setErrorBanner(
-            err?.message || 'შაბლონის ჩატვირთვისას დაფიქსირდა შეცდომა.'
+          const rawCellVal = cell?.value ?? '';
+          initVals[addr] = stripPrefixFromCellValue(
+            rawCellVal,
+            inst.usePrefix,
+            inst.prefixText,
+            inst.affixPosition || 'start'
           );
         }
       }
+
+      const { effectiveOverrides, affixRules, currencyRules } =
+        buildCombinedWorkbookPayload(
+          loadedInstructions,
+          initVals,
+          resolvedHeaderConfigs,
+          nextHeaderVals,
+          initialRows,
+          loadedTotalAddr,
+          parsed
+        );
+
+      const pkg = await generateUpdatedExcelPackage(
+        buf,
+        effectiveOverrides,
+        'ინვოისი',
+        affixRules,
+        currencyRules
+      );
+      if (isCancelled?.()) return;
+
+      setTemplateBuffer(buf);
+      setTemplateName(name);
+      setIsCustomDefault(customFlag);
+      setMainHeaderConfigs(resolvedHeaderConfigs);
+      setMainHeaderValues(nextHeaderVals);
+      setCustomFileName(nextHeaderVals.companyName);
+      setIsFileNameCustomized(false);
+      setProductRows(initialRows);
+      setGrandTotalAddress(loadedTotalAddr);
+      setInstructions(loadedInstructions);
+      setEditableValues(initVals);
+      setGeneratedPackage(pkg);
+      setSheetModel(pkg.sheetModel);
+      setIsDirtySinceLastGenerate(false);
+
+      profileSessionCacheRef.current[targetProfile] = {
+        templateBuffer: buf,
+        templateName: name,
+        isCustomDefault: customFlag,
+        mainHeaderConfigs: resolvedHeaderConfigs,
+        mainHeaderValues: nextHeaderVals,
+        customFileName: nextHeaderVals.companyName,
+        isFileNameCustomized: false,
+        productRows: initialRows,
+        grandTotalAddress: loadedTotalAddr,
+        instructions: loadedInstructions,
+        editableValues: initVals,
+        sheetModel: pkg.sheetModel,
+        generatedPackage: pkg,
+        isDirtySinceLastGenerate: false,
+      };
+    } catch (err: any) {
+      if (!isCancelled?.()) {
+        setErrorBanner(
+          err?.message || 'შაბლონის ჩატვირთვისას დაფიქსირდა შეცდომა.'
+        );
+      }
     }
-    initTemplate();
+  };
+
+  // Switch between 'mypos' ("მაიპოს") and 'btrade' ("ბითრეიდ") saving current session snapshot
+  const handleSwitchProfile = async (
+    nextProfile: InvoiceProfileId,
+    nextView?: AppMainView
+  ) => {
+    if (nextView) {
+      setActiveView(nextView);
+    }
+    setStatusBanner(null);
+    setErrorBanner(null);
+    if (nextProfile === activeProfile) return;
+
+    profileSessionCacheRef.current[activeProfile] = {
+      templateBuffer,
+      templateName,
+      isCustomDefault,
+      mainHeaderConfigs,
+      mainHeaderValues,
+      customFileName,
+      isFileNameCustomized,
+      productRows,
+      grandTotalAddress,
+      instructions,
+      editableValues,
+      sheetModel,
+      generatedPackage,
+      isDirtySinceLastGenerate,
+    };
+
+    setActiveProfile(nextProfile);
+    await loadTemplateForProfile(nextProfile);
+  };
+
+  // Initialize embedded/custom template on mount and ensure Btrade custom template in localStorage syncs
+  useEffect(() => {
+    let cancelled = false;
+    loadCustomDefaultTemplate('btrade');
+    loadTemplateForProfile('mypos', () => cancelled);
     return () => {
-      mounted = false;
+      cancelled = true;
     };
   }, []);
 
-  // Save instructions scoped to current template
+  // Save instructions scoped to current template & profile
   const updateInstructionsList = (
     next: EditableCellInstruction[],
-    targetTemplateName = templateName
+    targetTemplateName = templateName,
+    targetProfile = activeProfile
   ) => {
     setInstructions(next);
-    saveInstructionsForTemplate(targetTemplateName, next);
+    saveInstructionsForTemplate(targetTemplateName, next, targetProfile);
   };
 
   // Update one of the 6 Main Header field values
@@ -335,7 +447,7 @@ export default function App() {
       cfg.key === key ? { ...cfg, ...patch } : cfg
     );
     setMainHeaderConfigs(next);
-    saveMainHeaderConfigs(templateName, next);
+    saveMainHeaderConfigs(templateName, next, activeProfile);
     setIsDirtySinceLastGenerate(true);
   };
 
@@ -573,7 +685,7 @@ export default function App() {
   };
 
   /**
-   * Handle custom `.xlsx` template upload in Settings and embed it as default
+   * Handle custom `.xlsx` template upload in Settings and embed it as default for the active profile
    */
   const handleUploadTemplateFile = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -589,18 +701,33 @@ export default function App() {
       setTemplateBuffer(arrayBuf);
       setTemplateName(file.name);
       setIsCustomDefault(true);
-      saveCustomDefaultTemplate(arrayBuf, file.name);
+      saveCustomDefaultTemplate(arrayBuf, file.name, activeProfile);
 
-      const savedForThisFile = loadSavedInstructionsForTemplate(file.name, []);
+      const savedForThisFile = loadSavedInstructionsForTemplate(
+        file.name,
+        instructions.length > 0 ? instructions : DEFAULT_EDITABLE_INSTRUCTIONS,
+        activeProfile
+      );
       setInstructions(savedForThisFile);
+      saveInstructionsForTemplate(file.name, savedForThisFile, activeProfile);
 
-      const savedMainCfg = loadSavedMainHeaderConfigs(file.name);
+      const savedMainCfg =
+        loadSavedMainHeaderConfigs(file.name, activeProfile) || mainHeaderConfigs;
       const resolvedHdr = resolveMainHeaderFieldConfigs(
         parsed,
         savedForThisFile,
         savedMainCfg
       );
       setMainHeaderConfigs(resolvedHdr);
+      saveMainHeaderConfigs(file.name, resolvedHdr, activeProfile);
+
+      const loadedTotalAddr = loadSavedGrandTotalAddress(
+        file.name,
+        activeProfile,
+        grandTotalAddress
+      );
+      setGrandTotalAddress(loadedTotalAddr);
+      saveGrandTotalAddress(file.name, loadedTotalAddr, activeProfile);
 
       const { nextHeaderVals, initialRows } = extractInitialMainFormState(
         parsed,
@@ -636,7 +763,7 @@ export default function App() {
           resolvedHdr,
           nextHeaderVals,
           initialRows,
-          grandTotalAddress,
+          loadedTotalAddr,
           parsed
         );
 
@@ -650,8 +777,24 @@ export default function App() {
       setGeneratedPackage(pkg);
       setSheetModel(pkg.sheetModel);
       setIsDirtySinceLastGenerate(false);
+      profileSessionCacheRef.current[activeProfile] = {
+        templateBuffer: arrayBuf,
+        templateName: file.name,
+        isCustomDefault: true,
+        mainHeaderConfigs: resolvedHdr,
+        mainHeaderValues: nextHeaderVals,
+        customFileName: nextHeaderVals.companyName,
+        isFileNameCustomized: false,
+        productRows: initialRows,
+        grandTotalAddress: loadedTotalAddr,
+        instructions: savedForThisFile,
+        editableValues: nextVals,
+        sheetModel: pkg.sheetModel,
+        generatedPackage: pkg,
+        isDirtySinceLastGenerate: false,
+      };
       setStatusBanner(
-        `შაბლონი "${file.name}" აიტვირთა და დაყენდა ჩაშენებულ (Default) შაბლონად.`
+        `„${PROFILE_LABELS[activeProfile]}“-ის შაბლონი "${file.name}" აიტვირთა და ჩაშენდა საიტზე.`
       );
     } catch (err: any) {
       setErrorBanner(
@@ -664,17 +807,23 @@ export default function App() {
   };
 
   const handleRestoreFactoryTemplate = async () => {
-    clearCustomDefaultTemplate(templateName);
+    clearCustomDefaultTemplate(templateName, activeProfile);
     const buf = await createDefaultInvoiceTemplateBuffer();
     const parsed = await parseExcelBufferToSheetModel(buf);
+    const fallbackName =
+      activeProfile === 'btrade'
+        ? 'btrade_სტანდარტული_შაბლონი.xlsx'
+        : DEFAULT_TEMPLATE_FILENAME;
     setTemplateBuffer(buf);
-    setTemplateName(DEFAULT_TEMPLATE_FILENAME);
+    setTemplateName(fallbackName);
     setIsCustomDefault(false);
     updateInstructionsList(
       DEFAULT_EDITABLE_INSTRUCTIONS,
-      DEFAULT_TEMPLATE_FILENAME
+      fallbackName,
+      activeProfile
     );
     setMainHeaderConfigs(DEFAULT_MAIN_HEADER_CONFIGS);
+    setGrandTotalAddress('D36');
 
     const { nextHeaderVals, initialRows } = extractInitialMainFormState(
       parsed,
@@ -1286,13 +1435,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* Top Bar: Brand and Main vs Settings Navigation (Mobile & Desktop adapted) */}
+      {/* Top Bar: Brand and Main Profile Pages (მაიპოს, ბითრეიდ) + Settings Navigation */}
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-white border-b border-slate-200">
         <a
           href="#top"
           onClick={(e) => {
             e.preventDefault();
-            setActiveView('home');
+            handleSwitchProfile('mypos', 'home');
           }}
           className="text-base sm:text-lg font-bold tracking-tight text-slate-900 font-display whitespace-nowrap shrink-0"
         >
@@ -1301,19 +1450,32 @@ export default function App() {
 
         <nav
           aria-label="მთავარი ნავიგაცია"
-          className="flex items-center gap-1.5 sm:gap-3 text-xs sm:text-sm font-medium"
+          className="flex items-center gap-1.5 sm:gap-2.5 text-xs sm:text-sm font-medium"
         >
           <button
             type="button"
-            onClick={() => setActiveView('home')}
+            onClick={() => handleSwitchProfile('mypos', 'home')}
             className={`px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              activeView === 'home'
+              activeView === 'home' && activeProfile === 'mypos'
                 ? 'bg-sky-50 text-sky-800 font-semibold border border-sky-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <Home className="w-4 h-4 shrink-0" />
-            <span>მთავარი</span>
+            <FileSpreadsheet className="w-4 h-4 shrink-0" />
+            <span>მაიპოს</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSwitchProfile('btrade', 'home')}
+            className={`px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              activeView === 'home' && activeProfile === 'btrade'
+                ? 'bg-sky-50 text-sky-800 font-semibold border border-sky-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <FileSpreadsheet className="w-4 h-4 shrink-0" />
+            <span>ბითრეიდ</span>
           </button>
 
           <button
@@ -1369,8 +1531,26 @@ export default function App() {
         )}
 
         {activeView === 'home' ? (
-          /* MAIN PAGE ('home'): Clean, mobile-adapted fillable fields ONLY (no Excel preview, no cell names, no prefix checkboxes, no faint examples) */
+          /* MAIN PAGE ('home'): Clean, mobile-adapted fillable fields ONLY for activeProfile (მაიპოს or ბითრეიდ) */
           <div className="max-w-2xl mx-auto w-full space-y-4 sm:space-y-5">
+            {activeProfile === 'btrade' && !isCustomDefault && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-950 flex flex-wrap items-center justify-between gap-3">
+                <span>
+                  <strong>ბითრეიდ:</strong> საკუთარი Excel (.xlsx) ფაილის დასაყენებლად და მისი უჯრების ინსტრუქციების მოსანიშნად გადადით პარამეტრებში.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveView('settings');
+                    setSettingsTab('template');
+                  }}
+                  className="px-3 py-1.5 bg-amber-900 hover:bg-amber-800 text-white font-semibold rounded-lg transition-colors cursor-pointer shrink-0"
+                >
+                  ბითრეიდის შაბლონის დაყენება →
+                </button>
+              </div>
+            )}
+
             <div className="bg-white p-4 sm:p-6 rounded-xl border border-slate-200 space-y-5">
               <form onSubmit={handleGenerateNewExcel} className="space-y-6">
                 {/* SECTION 1: 6 MAIN HEADER FIELDS */}
@@ -1763,7 +1943,7 @@ export default function App() {
                 <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
                     <h1 className="text-base font-bold text-slate-900">
-                      პარამეტრები (Settings)
+                      პარამეტრები — {PROFILE_LABELS[activeProfile]}
                     </h1>
                     <p className="text-xs text-slate-500 mt-0.5">
                       შაბლონი: {templateName} · უჯრების ინსტრუქციები და კოორდინატები
@@ -1774,8 +1954,43 @@ export default function App() {
                     onClick={() => setActiveView('home')}
                     className="px-2.5 py-1.5 text-xs font-medium text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-md cursor-pointer shrink-0"
                   >
-                    ← მთავარზე დაბრუნება
+                    ← {PROFILE_LABELS[activeProfile]}-ზე დაბრუნება
                   </button>
+                </div>
+
+                {/* Profile Selector inside Settings: switch between მაიპოს and ბითრეიდ */}
+                <div className="p-2.5 rounded-lg bg-sky-50/70 border border-sky-200/80 space-y-1.5">
+                  <div className="text-[11px] font-semibold text-sky-950">
+                    აირჩიეთ გვერდი, რომლის შაბლონს და ინსტრუქციებსაც აყენებთ:
+                  </div>
+                  <div
+                    role="group"
+                    aria-label="შაბლონის გვერდის არჩევა"
+                    className="grid grid-cols-2 gap-1.5"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchProfile('mypos')}
+                      className={`py-1.5 px-3 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                        activeProfile === 'mypos'
+                          ? 'bg-sky-600 text-white shadow-2xs'
+                          : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                      }`}
+                    >
+                      მაიპოს (MyPos)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchProfile('btrade')}
+                      className={`py-1.5 px-3 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+                        activeProfile === 'btrade'
+                          ? 'bg-sky-600 text-white shadow-2xs'
+                          : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                      }`}
+                    >
+                      ბითრეიდ (Btrade)
+                    </button>
+                  </div>
                 </div>
 
                 {/* Settings Sub-Tabs */}
@@ -1830,10 +2045,10 @@ export default function App() {
                   <div className="space-y-4">
                     <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50/70 space-y-3">
                       <div className="text-xs font-bold text-slate-900">
-                        საწყისი გვერდის ველების უჯრების კოორდინატები
+                        „{PROFILE_LABELS[activeProfile]}“-ის გვერდის ველების უჯრების კოორდინატები
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        აქ შეგიძლიათ შეცვალოთ, რომელ უჯრაში ჩაიწეროს საწყისი გვერდის თითოეული ველი და სავალდებულო საწყისი სიტყვა:
+                        აქ შეგიძლიათ შეცვალოთ, რომელ უჯრაში ჩაიწეროს „{PROFILE_LABELS[activeProfile]}“-ის გვერდის თითოეული ველი და სავალდებულო საწყისი სიტყვა:
                       </p>
 
                       <div className="space-y-2">
@@ -1898,7 +2113,13 @@ export default function App() {
                             aria-label="სულ ჯამის უჯრის კოორდინატი"
                             value={grandTotalAddress}
                             onChange={(e) => {
-                              setGrandTotalAddress(e.target.value.toUpperCase());
+                              const nextAddr = e.target.value.toUpperCase();
+                              setGrandTotalAddress(nextAddr);
+                              saveGrandTotalAddress(
+                                templateName,
+                                nextAddr,
+                                activeProfile
+                              );
                               setIsDirtySinceLastGenerate(true);
                             }}
                             className="w-20 px-2 py-1 text-xs font-mono bg-emerald-50 border border-emerald-400 rounded text-center font-semibold"
@@ -1968,7 +2189,8 @@ export default function App() {
                       setMainHeaderConfigs(DEFAULT_MAIN_HEADER_CONFIGS);
                       saveMainHeaderConfigs(
                         templateName,
-                        DEFAULT_MAIN_HEADER_CONFIGS
+                        DEFAULT_MAIN_HEADER_CONFIGS,
+                        activeProfile
                       );
                       setIsDirtySinceLastGenerate(true);
                     }}
@@ -1980,7 +2202,7 @@ export default function App() {
                   <div className="space-y-4 text-xs">
                     <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
                       <div className="font-semibold text-slate-800">
-                        მიმდინარე ჩაშენებული (Default) შაბლონი
+                        „{PROFILE_LABELS[activeProfile]}“-ის ჩაშენებული (Default) შაბლონი
                       </div>
                       <div className="flex items-center justify-between gap-2 text-slate-600">
                         <span className="font-mono break-all">{templateName}</span>
@@ -1991,7 +2213,7 @@ export default function App() {
                         </span>
                       </div>
                       <p className="text-slate-500 leading-relaxed">
-                        საწყის გვერდზე მონაცემების შეყვანისას პირდაპირ ამ შაბლონის მიხედვით
+                        „{PROFILE_LABELS[activeProfile]}“-ის გვერდზე მონაცემების შეყვანისას პირდაპირ ამ შაბლონის მიხედვით
                         გენერირდება Excel (.xlsx) და PDF (.pdf) ფაილები. ფერები, სურათები და
                         უჯრების სტილები ნარჩუნდება 100%-ით.
                       </p>

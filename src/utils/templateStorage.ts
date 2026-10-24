@@ -1,12 +1,41 @@
-import { EditableCellInstruction, MainHeaderFieldConfig } from '../types/invoice';
+import {
+  EditableCellInstruction,
+  InvoiceProfileId,
+  MainHeaderFieldConfig,
+} from '../types/invoice';
+import embeddedBtradeTemplate from './embeddedBtradeTemplate.json';
 import embeddedCustomTemplate from './embeddedCustomTemplate.json';
 
+interface EmbeddedTemplateData {
+  base64?: string;
+  fileName?: string;
+  instructions?: EditableCellInstruction[];
+  mainHeaderConfigs?: MainHeaderFieldConfig[];
+  grandTotalAddress?: string;
+}
+
 const STORAGE_KEYS = {
-  INSTRUCTIONS_PREFIX: 'invoexcel_instructions_v2_',
-  MAIN_FIELDS_PREFIX: 'invoexcel_main_fields_v1_',
-  CUSTOM_TEMPLATE_B64: 'invoexcel_custom_template_b64_v1',
-  CUSTOM_TEMPLATE_NAME: 'invoexcel_custom_template_name_v1',
+  mypos: {
+    INSTRUCTIONS_PREFIX: 'invoexcel_instructions_v2_',
+    MAIN_FIELDS_PREFIX: 'invoexcel_main_fields_v1_',
+    GRAND_TOTAL_PREFIX: 'invoexcel_grand_total_v1_',
+    CUSTOM_TEMPLATE_B64: 'invoexcel_custom_template_b64_v1',
+    CUSTOM_TEMPLATE_NAME: 'invoexcel_custom_template_name_v1',
+  },
+  btrade: {
+    INSTRUCTIONS_PREFIX: 'invoexcel_btrade_instructions_v2_',
+    MAIN_FIELDS_PREFIX: 'invoexcel_btrade_main_fields_v2_',
+    GRAND_TOTAL_PREFIX: 'invoexcel_btrade_grand_total_v2_',
+    CUSTOM_TEMPLATE_B64: 'invoexcel_btrade_template_b64_v1',
+    CUSTOM_TEMPLATE_NAME: 'invoexcel_btrade_template_name_v1',
+  },
 };
+
+function getEmbeddedForProfile(profileId: InvoiceProfileId): EmbeddedTemplateData {
+  return (
+    profileId === 'btrade' ? embeddedBtradeTemplate : embeddedCustomTemplate
+  ) as EmbeddedTemplateData;
+}
 
 export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -29,25 +58,57 @@ export function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
+function resolveCurrentBase64AndName(
+  profileId: InvoiceProfileId,
+  fallbackFileName?: string
+): { base64: string; fileName: string } {
+  const keys = STORAGE_KEYS[profileId];
+  const embedded = getEmbeddedForProfile(profileId);
+  let b64 = '';
+  let name = '';
+  try {
+    b64 = localStorage.getItem(keys.CUSTOM_TEMPLATE_B64) || '';
+    name = localStorage.getItem(keys.CUSTOM_TEMPLATE_NAME) || '';
+  } catch {
+    // ignore
+  }
+  if (!b64 && embedded?.base64) {
+    b64 = embedded.base64;
+  }
+  if (!name) {
+    name =
+      fallbackFileName ||
+      embedded?.fileName ||
+      (profileId === 'btrade' ? 'btrade.xlsx' : 'pos.xlsx');
+  }
+  return { base64: b64, fileName: name };
+}
+
 /**
- * Syncs the active custom template from the browser's localStorage to the repository's
- * src/utils/embeddedCustomTemplate.json file during development so that static builds
- * (such as GitHub Pages) have the uploaded Excel file baked into the bundle.
+ * Syncs the active template, instructions, and header coordinates for a given profile ('mypos' or 'btrade')
+ * to the repository's JSON files during development so static builds (like GitHub Pages) include everything.
  */
 export function syncCustomTemplateToRepo(
   base64: string,
   fileName: string,
-  instructions?: EditableCellInstruction[]
+  instructions?: EditableCellInstruction[],
+  profileId: InvoiceProfileId = 'mypos',
+  mainHeaderConfigs?: MainHeaderFieldConfig[] | null,
+  grandTotalAddress?: string
 ): void {
-  if (typeof fetch === 'undefined' || !base64) return;
+  if (typeof fetch === 'undefined') return;
+  if (!base64 && (!instructions || instructions.length === 0)) return;
   try {
     fetch('/__sync_embedded_template', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        profileId,
         base64,
         fileName,
         instructions,
+        mainHeaderConfigs: mainHeaderConfigs || undefined,
+        grandTotalAddress: grandTotalAddress || undefined,
       }),
     }).catch(() => {
       // Ignore in static production environment (e.g. GitHub Pages)
@@ -59,10 +120,13 @@ export function syncCustomTemplateToRepo(
 
 export function loadSavedInstructionsForTemplate(
   templateName: string,
-  fallback: EditableCellInstruction[]
+  fallback: EditableCellInstruction[],
+  profileId: InvoiceProfileId = 'mypos'
 ): EditableCellInstruction[] {
+  const keys = STORAGE_KEYS[profileId];
+  const embedded = getEmbeddedForProfile(profileId);
   try {
-    const raw = localStorage.getItem(`${STORAGE_KEYS.INSTRUCTIONS_PREFIX}${templateName}`);
+    const raw = localStorage.getItem(`${keys.INSTRUCTIONS_PREFIX}${templateName}`);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -70,11 +134,10 @@ export function loadSavedInstructionsForTemplate(
       }
     }
     if (
-      embeddedCustomTemplate?.fileName === templateName &&
-      Array.isArray(embeddedCustomTemplate?.instructions) &&
-      embeddedCustomTemplate.instructions.length > 0
+      Array.isArray(embedded?.instructions) &&
+      embedded.instructions.length > 0
     ) {
-      return embeddedCustomTemplate.instructions as EditableCellInstruction[];
+      return embedded.instructions as EditableCellInstruction[];
     }
     return fallback;
   } catch {
@@ -84,32 +147,50 @@ export function loadSavedInstructionsForTemplate(
 
 export function saveInstructionsForTemplate(
   templateName: string,
-  instructions: EditableCellInstruction[]
+  instructions: EditableCellInstruction[],
+  profileId: InvoiceProfileId = 'mypos'
 ): void {
+  const keys = STORAGE_KEYS[profileId];
   try {
     localStorage.setItem(
-      `${STORAGE_KEYS.INSTRUCTIONS_PREFIX}${templateName}`,
+      `${keys.INSTRUCTIONS_PREFIX}${templateName}`,
       JSON.stringify(instructions)
     );
-    const b64 = localStorage.getItem(STORAGE_KEYS.CUSTOM_TEMPLATE_B64);
-    const name = localStorage.getItem(STORAGE_KEYS.CUSTOM_TEMPLATE_NAME);
-    if (b64 && name === templateName) {
-      syncCustomTemplateToRepo(b64, name, instructions);
-    }
+    const { base64, fileName } = resolveCurrentBase64AndName(profileId, templateName);
+    const savedMain = loadSavedMainHeaderConfigs(templateName, profileId);
+    const savedTotal = loadSavedGrandTotalAddress(templateName, profileId);
+    syncCustomTemplateToRepo(
+      base64,
+      fileName,
+      instructions,
+      profileId,
+      savedMain,
+      savedTotal
+    );
   } catch {
     // Ignore storage quota errors
   }
 }
 
 export function loadSavedMainHeaderConfigs(
-  templateName: string
+  templateName: string,
+  profileId: InvoiceProfileId = 'mypos'
 ): MainHeaderFieldConfig[] | null {
+  const keys = STORAGE_KEYS[profileId];
+  const embedded = getEmbeddedForProfile(profileId);
   try {
-    const raw = localStorage.getItem(`${STORAGE_KEYS.MAIN_FIELDS_PREFIX}${templateName}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length === 6) {
-      return parsed;
+    const raw = localStorage.getItem(`${keys.MAIN_FIELDS_PREFIX}${templateName}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length === 6) {
+        return parsed;
+      }
+    }
+    if (
+      Array.isArray(embedded?.mainHeaderConfigs) &&
+      embedded.mainHeaderConfigs.length === 6
+    ) {
+      return embedded.mainHeaderConfigs;
     }
     return null;
   } catch {
@@ -119,51 +200,155 @@ export function loadSavedMainHeaderConfigs(
 
 export function saveMainHeaderConfigs(
   templateName: string,
-  configs: MainHeaderFieldConfig[]
+  configs: MainHeaderFieldConfig[],
+  profileId: InvoiceProfileId = 'mypos'
 ): void {
+  const keys = STORAGE_KEYS[profileId];
   try {
     localStorage.setItem(
-      `${STORAGE_KEYS.MAIN_FIELDS_PREFIX}${templateName}`,
+      `${keys.MAIN_FIELDS_PREFIX}${templateName}`,
       JSON.stringify(configs)
+    );
+    const { base64, fileName } = resolveCurrentBase64AndName(profileId, templateName);
+    const savedInst = loadSavedInstructionsForTemplate(templateName, [], profileId);
+    const savedTotal = loadSavedGrandTotalAddress(templateName, profileId);
+    syncCustomTemplateToRepo(
+      base64,
+      fileName,
+      savedInst,
+      profileId,
+      configs,
+      savedTotal
     );
   } catch {
     // Ignore
   }
 }
 
-export function saveCustomDefaultTemplate(buffer: ArrayBuffer, fileName: string): void {
+export function loadSavedGrandTotalAddress(
+  templateName: string,
+  profileId: InvoiceProfileId = 'mypos',
+  fallback = 'D36'
+): string {
+  const keys = STORAGE_KEYS[profileId];
+  const embedded = getEmbeddedForProfile(profileId);
+  try {
+    const raw = localStorage.getItem(`${keys.GRAND_TOTAL_PREFIX}${templateName}`);
+    if (raw && raw.trim()) {
+      return raw.trim().toUpperCase();
+    }
+    if (embedded?.grandTotalAddress && embedded.grandTotalAddress.trim()) {
+      return embedded.grandTotalAddress.trim().toUpperCase();
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveGrandTotalAddress(
+  templateName: string,
+  grandTotalAddress: string,
+  profileId: InvoiceProfileId = 'mypos'
+): void {
+  const keys = STORAGE_KEYS[profileId];
+  const clean = grandTotalAddress.trim().toUpperCase() || 'D36';
+  try {
+    localStorage.setItem(`${keys.GRAND_TOTAL_PREFIX}${templateName}`, clean);
+    const { base64, fileName } = resolveCurrentBase64AndName(profileId, templateName);
+    const savedInst = loadSavedInstructionsForTemplate(templateName, [], profileId);
+    const savedMain = loadSavedMainHeaderConfigs(templateName, profileId);
+    syncCustomTemplateToRepo(
+      base64,
+      fileName,
+      savedInst,
+      profileId,
+      savedMain,
+      clean
+    );
+  } catch {
+    // Ignore
+  }
+}
+
+export function saveCustomDefaultTemplate(
+  buffer: ArrayBuffer,
+  fileName: string,
+  profileId: InvoiceProfileId = 'mypos'
+): void {
+  const keys = STORAGE_KEYS[profileId];
   try {
     const b64 = arrayBufferToBase64(buffer);
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_TEMPLATE_B64, b64);
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_TEMPLATE_NAME, fileName);
-    const savedInst = loadSavedInstructionsForTemplate(fileName, []);
-    syncCustomTemplateToRepo(b64, fileName, savedInst);
+    localStorage.setItem(keys.CUSTOM_TEMPLATE_B64, b64);
+    localStorage.setItem(keys.CUSTOM_TEMPLATE_NAME, fileName);
+    const savedInst = loadSavedInstructionsForTemplate(fileName, [], profileId);
+    const savedMain = loadSavedMainHeaderConfigs(fileName, profileId);
+    const savedTotal = loadSavedGrandTotalAddress(fileName, profileId);
+    syncCustomTemplateToRepo(
+      b64,
+      fileName,
+      savedInst,
+      profileId,
+      savedMain,
+      savedTotal
+    );
   } catch {
     // Ignore storage quota errors
   }
 }
 
-export function loadCustomDefaultTemplate(): { buffer: ArrayBuffer; fileName: string } | null {
+export function loadCustomDefaultTemplate(
+  profileId: InvoiceProfileId = 'mypos'
+): { buffer: ArrayBuffer; fileName: string } | null {
+  const keys = STORAGE_KEYS[profileId];
+  const embedded = getEmbeddedForProfile(profileId);
   try {
-    const b64 = localStorage.getItem(STORAGE_KEYS.CUSTOM_TEMPLATE_B64);
-    const fileName = localStorage.getItem(STORAGE_KEYS.CUSTOM_TEMPLATE_NAME);
+    const b64 = localStorage.getItem(keys.CUSTOM_TEMPLATE_B64);
+    const fileName = localStorage.getItem(keys.CUSTOM_TEMPLATE_NAME);
     if (b64 && fileName) {
-      const savedInst = loadSavedInstructionsForTemplate(fileName, []);
-      syncCustomTemplateToRepo(b64, fileName, savedInst);
+      const savedInst = loadSavedInstructionsForTemplate(fileName, [], profileId);
+      const savedMain = loadSavedMainHeaderConfigs(fileName, profileId);
+      const savedTotal = loadSavedGrandTotalAddress(fileName, profileId);
+      syncCustomTemplateToRepo(
+        b64,
+        fileName,
+        savedInst,
+        profileId,
+        savedMain,
+        savedTotal
+      );
       return {
         buffer: base64ToArrayBuffer(b64),
         fileName,
       };
     }
-    // Fallback to bundled embeddedCustomTemplate.json (used when deployed to GitHub Pages!)
+    // Fallback to bundled embedded JSON (used when deployed to GitHub Pages!)
     if (
-      embeddedCustomTemplate &&
-      typeof embeddedCustomTemplate.base64 === 'string' &&
-      embeddedCustomTemplate.base64.length > 0
+      embedded &&
+      typeof embedded.base64 === 'string' &&
+      embedded.base64.length > 0
     ) {
+      const embeddedName =
+        embedded.fileName ||
+        (profileId === 'btrade' ? 'btrade_შაბლონი.xlsx' : 'ჩაშენებული_შაბლონი.xlsx');
+      const savedInst = loadSavedInstructionsForTemplate(
+        embeddedName,
+        embedded.instructions || [],
+        profileId
+      );
+      const savedMain = loadSavedMainHeaderConfigs(embeddedName, profileId);
+      const savedTotal = loadSavedGrandTotalAddress(embeddedName, profileId);
+      syncCustomTemplateToRepo(
+        embedded.base64,
+        embeddedName,
+        savedInst,
+        profileId,
+        savedMain,
+        savedTotal
+      );
       return {
-        buffer: base64ToArrayBuffer(embeddedCustomTemplate.base64),
-        fileName: embeddedCustomTemplate.fileName || 'ჩაშენებული_შაბლონი.xlsx',
+        buffer: base64ToArrayBuffer(embedded.base64),
+        fileName: embeddedName,
       };
     }
     return null;
@@ -172,15 +357,21 @@ export function loadCustomDefaultTemplate(): { buffer: ArrayBuffer; fileName: st
   }
 }
 
-export function clearCustomDefaultTemplate(templateName?: string): void {
+export function clearCustomDefaultTemplate(
+  templateName?: string,
+  profileId: InvoiceProfileId = 'mypos'
+): void {
+  const keys = STORAGE_KEYS[profileId];
   try {
-    localStorage.removeItem(STORAGE_KEYS.CUSTOM_TEMPLATE_B64);
-    localStorage.removeItem(STORAGE_KEYS.CUSTOM_TEMPLATE_NAME);
+    localStorage.removeItem(keys.CUSTOM_TEMPLATE_B64);
+    localStorage.removeItem(keys.CUSTOM_TEMPLATE_NAME);
     if (templateName) {
-      localStorage.removeItem(`${STORAGE_KEYS.INSTRUCTIONS_PREFIX}${templateName}`);
-      localStorage.removeItem(`${STORAGE_KEYS.MAIN_FIELDS_PREFIX}${templateName}`);
+      localStorage.removeItem(`${keys.INSTRUCTIONS_PREFIX}${templateName}`);
+      localStorage.removeItem(`${keys.MAIN_FIELDS_PREFIX}${templateName}`);
+      localStorage.removeItem(`${keys.GRAND_TOTAL_PREFIX}${templateName}`);
     }
   } catch {
     // Ignore
   }
 }
+

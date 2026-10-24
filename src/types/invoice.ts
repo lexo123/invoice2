@@ -2,6 +2,8 @@ export type CellInputType = 'text' | 'number' | 'currency' | 'date' | 'formula';
 export type AffixPosition = 'start' | 'end';
 export type CurrencySymbol = '₾' | '$';
 export type FormulaResultFormat = 'number' | 'currency';
+export type InvoiceProfileId = 'mypos' | 'btrade';
+
 
 export type MainHeaderFieldKey =
   | 'companyName'

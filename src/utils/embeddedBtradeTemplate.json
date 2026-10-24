@@ -1,0 +1,485 @@
+{
+  "base64": "",
+  "fileName": "",
+  "instructions": [
+    {
+      "id": "custom-A12-1792744901796",
+      "address": "A12",
+      "label": "კომპანიის სახელი",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": true,
+      "prefixText": "კომპ/სახელი:"
+    },
+    {
+      "id": "custom-A13-1792744930008",
+      "address": "A13",
+      "label": "ს/კ",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": true,
+      "prefixText": "ს/კ",
+      "optional": false
+    },
+    {
+      "id": "custom-A14-1792744959375",
+      "address": "A14",
+      "label": "მისამართი",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": true,
+      "prefixText": "მისამართი:"
+    },
+    {
+      "id": "custom-D5-1792745363551",
+      "address": "D5",
+      "label": "ინვოისის ნომერი",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": ""
+    },
+    {
+      "id": "custom-D7-1792745385102",
+      "address": "D7",
+      "label": "დოლარის კურსი",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": ""
+    },
+    {
+      "id": "custom-A17-1792745442928",
+      "address": "A17",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": ""
+    },
+    {
+      "id": "custom-B17-1792745461859",
+      "address": "B17",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": ""
+    },
+    {
+      "id": "custom-C17-1792745490486",
+      "address": "C17",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "cell-D4-1792748499689",
+      "address": "D4",
+      "label": "თარიღი",
+      "group": "other",
+      "inputType": "date",
+      "usePrefix": false,
+      "prefixText": ""
+    },
+    {
+      "id": "cell-D17-1792748997717",
+      "address": "D17",
+      "label": "უჯრა D17",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "formulaExpression": "=B17*C17",
+      "currencySymbol": "₾",
+      "formulaResultFormat": "currency"
+    },
+    {
+      "id": "custom-A18-1792750508513",
+      "address": "A18",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B18-1792750530163",
+      "address": "B18",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-C18-1792750615614",
+      "address": "C18",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-A19-1792750637929",
+      "address": "A19",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-A20-1792750645656",
+      "address": "A20",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-A21-1792750653311",
+      "address": "A21",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-A22-1792750661744",
+      "address": "A22",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-A23-1792750671991",
+      "address": "A23",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-A24-1792750679612",
+      "address": "A24",
+      "label": "დანიშნულება",
+      "group": "other",
+      "inputType": "text",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B19-1792750764133",
+      "address": "B19",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B20-1792750778299",
+      "address": "B20",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B21-1792750787998",
+      "address": "B21",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B22-1792750794196",
+      "address": "B22",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B23-1792750802255",
+      "address": "B23",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-B24-1792750808313",
+      "address": "B24",
+      "label": "რაოდენობა",
+      "group": "other",
+      "inputType": "number",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true
+    },
+    {
+      "id": "custom-C19-1792750829624",
+      "address": "C19",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-C20-1792750837397",
+      "address": "C20",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-C21-1792750843587",
+      "address": "C21",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-C22-1792750851045",
+      "address": "C22",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-C23-1792750858553",
+      "address": "C23",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-C24-1792750877005",
+      "address": "C24",
+      "label": "ერთეულის ფასი",
+      "group": "other",
+      "inputType": "currency",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": true,
+      "currencySymbol": "₾"
+    },
+    {
+      "id": "custom-D18-1792750923111",
+      "address": "D18",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B18*c18",
+      "currencySymbol": "₾",
+      "formulaResultFormat": "currency"
+    },
+    {
+      "id": "custom-D19-1792750959149",
+      "address": "D19",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B19*C19",
+      "currencySymbol": "₾",
+      "formulaResultFormat": "currency"
+    },
+    {
+      "id": "custom-D20-1792750973902",
+      "address": "D20",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B20*C20",
+      "currencySymbol": "₾",
+      "formulaResultFormat": "currency"
+    },
+    {
+      "id": "custom-D21-1792750989589",
+      "address": "D21",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B21*C21",
+      "currencySymbol": "₾",
+      "formulaResultFormat": "currency"
+    },
+    {
+      "id": "custom-D22-1792751021371",
+      "address": "D22",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B22*C22",
+      "currencySymbol": "₾",
+      "formulaResultFormat": "currency"
+    },
+    {
+      "id": "custom-D23-1792751048740",
+      "address": "D23",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B23*C23",
+      "currencySymbol": "₾",
+      "formulaResultFormat": "currency"
+    },
+    {
+      "id": "custom-D24-1792751068293",
+      "address": "D24",
+      "label": "თანხა",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": false,
+      "prefixText": "",
+      "optional": false,
+      "formulaExpression": "=B24*C24",
+      "currencySymbol": "₾",
+      "formulaResultFormat": "currency"
+    },
+    {
+      "id": "custom-D36-1792751165861",
+      "address": "D36",
+      "label": "ჯამი",
+      "group": "other",
+      "inputType": "formula",
+      "usePrefix": true,
+      "prefixText": " ლარი",
+      "optional": false,
+      "formulaExpression": "=D17+D18+D19+D20+D21+D22+D23+D24",
+      "affixPosition": "end",
+      "currencySymbol": "₾"
+    }
+  ],
+  "mainHeaderConfigs": [
+    {
+      "key": "companyName",
+      "label": "კომპანიის სახელი",
+      "address": "A12",
+      "inputType": "text",
+      "placeholder": "შპს კავკასუს ლოჯისტიკსი",
+      "usePrefix": true,
+      "prefixText": "კომპ/სახელი:",
+      "affixPosition": "start"
+    },
+    {
+      "key": "cadastralCode",
+      "label": "საკადასტრო",
+      "address": "A13",
+      "inputType": "text",
+      "placeholder": "404998877",
+      "usePrefix": true,
+      "prefixText": "ს/კ",
+      "affixPosition": "start"
+    },
+    {
+      "key": "address",
+      "label": "მისამართი",
+      "address": "A14",
+      "inputType": "text",
+      "placeholder": "გორის ქუჩა 2",
+      "usePrefix": true,
+      "prefixText": "მისამართი:",
+      "affixPosition": "start"
+    },
+    {
+      "key": "usdRate",
+      "label": "დოლარის კურსი",
+      "address": "D7",
+      "inputType": "number",
+      "placeholder": "2.72",
+      "usePrefix": false,
+      "prefixText": "დოლარის კურსი",
+      "affixPosition": "start"
+    },
+    {
+      "key": "date",
+      "label": "თარიღი",
+      "address": "D4",
+      "inputType": "date",
+      "placeholder": "23.10.2026",
+      "usePrefix": false,
+      "prefixText": "თარიღი",
+      "affixPosition": "start"
+    },
+    {
+      "key": "invoiceNumber",
+      "label": "ინვოისის ნომერი",
+      "address": "D5",
+      "inputType": "text",
+      "placeholder": "INV-2026-0104",
+      "usePrefix": false,
+      "prefixText": "ინვოისის ნომერი",
+      "affixPosition": "start"
+    }
+  ],
+  "grandTotalAddress": "D36"
+}

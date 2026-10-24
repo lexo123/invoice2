@@ -486,6 +486,86 @@ test('product cells (A17:A24) keep numeric input as string so they always align 
   assert.equal(typeof recalculated['C17'].value, 'number');
 });
 
+test('D17:D24 row totals consistently receive Lari (₾) currency format while D36 with "ლარი" suffix stays number', () => {
+  const payload = buildCombinedWorkbookPayload(
+    [
+      {
+        id: 'd17-formula',
+        address: 'D17',
+        label: 'თანხა',
+        group: 'other',
+        inputType: 'formula',
+        formulaExpression: '=B17*C17',
+        formulaResultFormat: 'currency',
+        currencySymbol: '₾',
+      },
+      {
+        id: 'd36-formula',
+        address: 'D36',
+        label: 'ჯამი',
+        group: 'other',
+        inputType: 'formula',
+        usePrefix: true,
+        prefixText: ' ლარი',
+        affixPosition: 'end',
+        formulaExpression: '=D17+D18',
+        currencySymbol: '₾',
+      },
+    ],
+    {},
+    DEFAULT_MAIN_HEADER_CONFIGS,
+    {
+      companyName: 'შპს მაიპოს',
+      cadastralCode: '123456789',
+      address: 'თბილისი',
+      usdRate: '2.6',
+      date: '24.10.2026',
+      invoiceNumber: '01',
+    },
+    [
+      {
+        id: 'prod-1',
+        productName: 'POS ტერმინალი',
+        quantity: '2',
+        unitPrice: '150',
+        currency: '₾',
+      },
+    ],
+    'D36',
+    null
+  );
+
+  assert.deepEqual(payload.currencyRules['D17'], { mode: 'currency', symbol: '₾' });
+  assert.deepEqual(payload.currencyRules['D36'], { mode: 'number' });
+});
+
+test('Btrade embedded template has the exact same instructions, mainHeaderConfigs, and grandTotalAddress as MyPos', async () => {
+  const myposEmbedded = (await import('./embeddedCustomTemplate.json')).default;
+  const btradeEmbedded = (await import('./embeddedBtradeTemplate.json')).default;
+  const {
+    loadSavedInstructionsForTemplate,
+    loadSavedMainHeaderConfigs,
+    loadSavedGrandTotalAddress,
+  } = await import('./templateStorage');
+
+  assert.deepEqual(btradeEmbedded.instructions, myposEmbedded.instructions);
+  assert.deepEqual(btradeEmbedded.mainHeaderConfigs, myposEmbedded.mainHeaderConfigs);
+  assert.equal(btradeEmbedded.grandTotalAddress, myposEmbedded.grandTotalAddress);
+
+  const btradeInst = loadSavedInstructionsForTemplate('any_btrade.xlsx', [], 'btrade');
+  const myposInst = loadSavedInstructionsForTemplate('pos.xlsx', [], 'mypos');
+  assert.deepEqual(btradeInst, myposInst);
+
+  const btradeHeaders = loadSavedMainHeaderConfigs('any_btrade.xlsx', 'btrade');
+  const myposHeaders = loadSavedMainHeaderConfigs('pos.xlsx', 'mypos');
+  assert.deepEqual(btradeHeaders, myposHeaders);
+
+  assert.equal(
+    loadSavedGrandTotalAddress('any_btrade.xlsx', 'btrade'),
+    loadSavedGrandTotalAddress('pos.xlsx', 'mypos')
+  );
+});
+
 
 
 
