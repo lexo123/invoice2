@@ -67,6 +67,10 @@ import {
   saveInstructionsForTemplate,
   saveMainHeaderConfigs,
 } from './utils/templateStorage';
+import {
+  trackInitialSessionVisit,
+  trackSiteEvent,
+} from './utils/analyticsTracker';
 import { ExcelSheetPreview } from './components/ExcelSheetPreview';
 import { InstructionsConfigPanel } from './components/InstructionsConfigPanel';
 
@@ -393,6 +397,7 @@ export default function App() {
   // Initialize embedded/custom template on mount and ensure Btrade custom template in localStorage syncs
   useEffect(() => {
     let cancelled = false;
+    trackInitialSessionVisit('mypos');
     loadCustomDefaultTemplate('btrade');
     loadTemplateForProfile('mypos', () => cancelled);
     return () => {
@@ -647,6 +652,11 @@ export default function App() {
         mainHeaderValues.companyName
       );
       downloadExcelBuffer(pkg.xlsxBuffer, `${resolvedBaseName}.xlsx`);
+      void trackSiteEvent({
+        eventType: 'download_excel',
+        profileId: activeProfile,
+        fileName: `${resolvedBaseName}.xlsx`,
+      });
       setStatusBanner(`ფაილი ${resolvedBaseName}.xlsx გადმოიწერა.`);
     } catch (err: any) {
       setErrorBanner(err?.message || 'Excel ფაილის გადმოწერისას დაფიქსირდა შეცდომა.');
@@ -674,6 +684,11 @@ export default function App() {
         sheetPrintRef.current,
         `${resolvedBaseName}.pdf`
       );
+      void trackSiteEvent({
+        eventType: 'download_pdf',
+        profileId: activeProfile,
+        fileName: `${resolvedBaseName}.pdf`,
+      });
       setStatusBanner(
         `PDF ფაილი (${resolvedBaseName}.pdf) ორიგინალი ფერებითა და სურათებით გადმოიწერა.`
       );

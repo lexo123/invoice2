@@ -22,6 +22,22 @@ function embeddedTemplateSyncPlugin(): Plugin {
           try {
             const parsed = JSON.parse(body);
             if (parsed && typeof parsed === 'object') {
+              if (typeof parsed.googleSheetsWebAppUrl === 'string') {
+                const analyticsPath = path.resolve(
+                  __dirname,
+                  'src/utils/embeddedAnalyticsConfig.json'
+                );
+                const nextAnalytics = JSON.stringify(
+                  { googleSheetsWebAppUrl: parsed.googleSheetsWebAppUrl.trim() },
+                  null,
+                  2
+                );
+                fs.writeFileSync(analyticsPath, nextAnalytics, 'utf-8');
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ ok: true }));
+                return;
+              }
               const isBtrade = parsed.profileId === 'btrade';
               const targetFile = isBtrade
                 ? 'src/utils/embeddedBtradeTemplate.json'
