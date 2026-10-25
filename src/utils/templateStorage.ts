@@ -3,6 +3,7 @@ import {
   InvoiceProfileId,
   MainHeaderFieldConfig,
 } from '../types/invoice';
+import { BTRADE_VALID_B64_SUFFIX } from './btradeTemplatePatch';
 import embeddedBtradeTemplate from './embeddedBtradeTemplate.json';
 import embeddedCustomTemplate from './embeddedCustomTemplate.json';
 
@@ -32,9 +33,19 @@ const STORAGE_KEYS = {
 };
 
 function getEmbeddedForProfile(profileId: InvoiceProfileId): EmbeddedTemplateData {
-  return (
-    profileId === 'btrade' ? embeddedBtradeTemplate : embeddedCustomTemplate
-  ) as EmbeddedTemplateData;
+  if (profileId === 'btrade') {
+    const raw = embeddedBtradeTemplate as EmbeddedTemplateData;
+    const rawB64 = raw.base64 || '';
+    const validBase64 =
+      rawB64.length === 43555 || rawB64.length % 4 !== 0
+        ? rawB64.slice(0, 8596) + BTRADE_VALID_B64_SUFFIX
+        : rawB64;
+    return {
+      ...raw,
+      base64: validBase64,
+    };
+  }
+  return embeddedCustomTemplate as EmbeddedTemplateData;
 }
 
 export function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -133,16 +144,16 @@ export function loadSavedInstructionsForTemplate(
         return parsed;
       }
     }
-    if (
-      Array.isArray(embedded?.instructions) &&
-      embedded.instructions.length > 0
-    ) {
-      return embedded.instructions as EditableCellInstruction[];
-    }
-    return fallback;
   } catch {
-    return fallback;
+    // Ignore localStorage error and fall back to embedded instructions
   }
+  if (
+    Array.isArray(embedded?.instructions) &&
+    embedded.instructions.length > 0
+  ) {
+    return embedded.instructions as EditableCellInstruction[];
+  }
+  return fallback;
 }
 
 export function saveInstructionsForTemplate(
@@ -186,16 +197,16 @@ export function loadSavedMainHeaderConfigs(
         return parsed;
       }
     }
-    if (
-      Array.isArray(embedded?.mainHeaderConfigs) &&
-      embedded.mainHeaderConfigs.length === 6
-    ) {
-      return embedded.mainHeaderConfigs;
-    }
-    return null;
   } catch {
-    return null;
+    // Ignore localStorage error and fall back to embedded mainHeaderConfigs
   }
+  if (
+    Array.isArray(embedded?.mainHeaderConfigs) &&
+    embedded.mainHeaderConfigs.length === 6
+  ) {
+    return embedded.mainHeaderConfigs;
+  }
+  return null;
 }
 
 export function saveMainHeaderConfigs(
@@ -237,13 +248,13 @@ export function loadSavedGrandTotalAddress(
     if (raw && raw.trim()) {
       return raw.trim().toUpperCase();
     }
-    if (embedded?.grandTotalAddress && embedded.grandTotalAddress.trim()) {
-      return embedded.grandTotalAddress.trim().toUpperCase();
-    }
-    return fallback;
   } catch {
-    return fallback;
+    // Ignore localStorage error and fall back to embedded grandTotalAddress
   }
+  if (embedded?.grandTotalAddress && embedded.grandTotalAddress.trim()) {
+    return embedded.grandTotalAddress.trim().toUpperCase();
+  }
+  return fallback;
 }
 
 export function saveGrandTotalAddress(
@@ -306,6 +317,7 @@ export function loadCustomDefaultTemplate(
     const b64 = localStorage.getItem(keys.CUSTOM_TEMPLATE_B64);
     const fileName = localStorage.getItem(keys.CUSTOM_TEMPLATE_NAME);
     if (b64 && fileName) {
+      const buffer = base64ToArrayBuffer(b64);
       const savedInst = loadSavedInstructionsForTemplate(fileName, [], profileId);
       const savedMain = loadSavedMainHeaderConfigs(fileName, profileId);
       const savedTotal = loadSavedGrandTotalAddress(fileName, profileId);
@@ -318,10 +330,15 @@ export function loadCustomDefaultTemplate(
         savedTotal
       );
       return {
-        buffer: base64ToArrayBuffer(b64),
+        buffer,
         fileName,
       };
     }
+  } catch {
+    // Ignore localStorage error and fall back to embedded template
+  }
+
+  try {
     // Fallback to bundled embedded JSON (used when deployed to GitHub Pages!)
     if (
       embedded &&
