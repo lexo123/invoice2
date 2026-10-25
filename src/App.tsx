@@ -808,67 +808,11 @@ export default function App() {
 
   const handleRestoreFactoryTemplate = async () => {
     clearCustomDefaultTemplate(templateName, activeProfile);
-    const buf = await createDefaultInvoiceTemplateBuffer();
-    const parsed = await parseExcelBufferToSheetModel(buf);
-    const fallbackName =
-      activeProfile === 'btrade'
-        ? 'btrade_სტანდარტული_შაბლონი.xlsx'
-        : DEFAULT_TEMPLATE_FILENAME;
-    setTemplateBuffer(buf);
-    setTemplateName(fallbackName);
-    setIsCustomDefault(false);
-    updateInstructionsList(
-      DEFAULT_EDITABLE_INSTRUCTIONS,
-      fallbackName,
-      activeProfile
+    delete profileSessionCacheRef.current[activeProfile];
+    await loadTemplateForProfile(activeProfile);
+    setStatusBanner(
+      `აღდგენილია „${PROFILE_LABELS[activeProfile]}“-ის ჩაშენებული სტანდარტული შაბლონი.`
     );
-    setMainHeaderConfigs(DEFAULT_MAIN_HEADER_CONFIGS);
-    setGrandTotalAddress('D36');
-
-    const { nextHeaderVals, initialRows } = extractInitialMainFormState(
-      parsed,
-      DEFAULT_MAIN_HEADER_CONFIGS,
-      DEFAULT_EDITABLE_INSTRUCTIONS
-    );
-    setMainHeaderValues(nextHeaderVals);
-    setCustomFileName(nextHeaderVals.companyName);
-    setIsFileNameCustomized(false);
-    setProductRows(initialRows);
-
-    const initVals: Record<string, string | number> = {};
-    for (const inst of DEFAULT_EDITABLE_INSTRUCTIONS) {
-      const addr = inst.address.toUpperCase();
-      initVals[addr] = stripPrefixFromCellValue(
-        parsed.cells[addr]?.value ?? '',
-        inst.usePrefix,
-        inst.prefixText,
-        inst.affixPosition || 'start'
-      );
-    }
-    setEditableValues(initVals);
-
-    const { effectiveOverrides, affixRules, currencyRules } =
-      buildCombinedWorkbookPayload(
-        DEFAULT_EDITABLE_INSTRUCTIONS,
-        initVals,
-        DEFAULT_MAIN_HEADER_CONFIGS,
-        nextHeaderVals,
-        initialRows,
-        'D36',
-        parsed
-      );
-
-    const pkg = await generateUpdatedExcelPackage(
-      buf,
-      effectiveOverrides,
-      'ინვოისი',
-      affixRules,
-      currencyRules
-    );
-    setGeneratedPackage(pkg);
-    setSheetModel(pkg.sheetModel);
-    setIsDirtySinceLastGenerate(false);
-    setStatusBanner('აღდგენილია სტანდარტული ერთგვერდიანი ინვოისის შაბლონი.');
   };
 
   // Resolve master address when clicking merged cells in preview

@@ -23,11 +23,11 @@ const STORAGE_KEYS = {
     CUSTOM_TEMPLATE_NAME: 'invoexcel_custom_template_name_v1',
   },
   btrade: {
-    INSTRUCTIONS_PREFIX: 'invoexcel_btrade_instructions_v2_',
-    MAIN_FIELDS_PREFIX: 'invoexcel_btrade_main_fields_v2_',
-    GRAND_TOTAL_PREFIX: 'invoexcel_btrade_grand_total_v2_',
-    CUSTOM_TEMPLATE_B64: 'invoexcel_btrade_template_b64_v1',
-    CUSTOM_TEMPLATE_NAME: 'invoexcel_btrade_template_name_v1',
+    INSTRUCTIONS_PREFIX: 'invoexcel_btrade_instructions_v3_',
+    MAIN_FIELDS_PREFIX: 'invoexcel_btrade_main_fields_v3_',
+    GRAND_TOTAL_PREFIX: 'invoexcel_btrade_grand_total_v3_',
+    CUSTOM_TEMPLATE_B64: 'invoexcel_btrade_template_b64_v3',
+    CUSTOM_TEMPLATE_NAME: 'invoexcel_btrade_template_name_v3',
   },
 };
 
